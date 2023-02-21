@@ -6,6 +6,10 @@ from .filters import PostFilter
 from .forms import PostForm
 from django.http import HttpResponseRedirect
 from django.urls import reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.shortcuts import redirect
+from django.contrib.auth.models import Group
+from django.contrib.auth.decorators import login_required
 
 
 class NewsList(ListView):
@@ -24,6 +28,8 @@ class NewsList(ListView):
         context = super().get_context_data(**kwargs)
         context['time_now'] = datetime.utcnow()
         context['filterset'] = self.filterset
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        context['is_common'] = self.request.user.groups.filter(name='common').exists()
         return context
 
 
@@ -33,11 +39,18 @@ class NewsDetail(DetailView):
     template_name = 'new.html'
     context_object_name = 'new'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        context['is_common'] = self.request.user.groups.filter(name='common').exists()
+        return context
 
-class NewsCreate(CreateView):
+
+class NewsCreate(PermissionRequiredMixin, CreateView):
     form_class = PostForm
     model = Post
     template_name = 'post_edit.html'
+    permission_required = 'news.add_post'
 
     def form_valid(self, form):
         new = form.save(commit=False)
@@ -45,11 +58,17 @@ class NewsCreate(CreateView):
         new.author_id_id = 1
         return super().form_valid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        return context
 
-class ArticleCreate(CreateView):
+
+class ArticleCreate(PermissionRequiredMixin, CreateView):
     form_class = PostForm
     model = Post
     template_name = 'post_edit.html'
+    permission_required = 'news.add_post'
 
     def form_valid(self, form):
         new = form.save(commit=False)
@@ -57,14 +76,48 @@ class ArticleCreate(CreateView):
         new.author_id_id = 1
         return super().form_valid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        return context
 
-class PostUpdate(UpdateView):
+
+class PostUpdate(PermissionRequiredMixin, UpdateView):
     form_class = PostForm
     model = Post
     template_name = 'post_update.html'
+    permission_required = 'news.change_post'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        return context
 
 
-class PostDelete(DeleteView):
+class PostDelete(PermissionRequiredMixin, DeleteView):
     model = Post
     template_name = 'post_delete.html'
     success_url = reverse_lazy('post_list')
+    permission_required = 'news.delete_post'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        return context
+
+
+@login_required
+def upgrade_me_redposts(request):
+    user = request.user
+    premium_group = Group.objects.get(name='authors')
+    if not request.user.groups.filter(name='authors').exists():
+        premium_group.user_set.add(user)
+    return redirect('/posts')
+
+@login_required #временная функция
+def delete_me_redpost(request):
+    user = request.user
+    premium_group = Group.objects.get(name='authors')
+    if not request.user.groups.filter(name='authors').exists():
+        premium_group.user_set.pop(user)
+    return redirect('/post')
