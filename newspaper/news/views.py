@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView, DeleteView, CreateView, UpdateView
-from .models import Post
+from django.views.generic.base import View
+from .models import Post, Author, UserCategory, Category
 from datetime import datetime
 from .filters import PostFilter
 from .forms import PostForm
@@ -10,6 +11,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.shortcuts import redirect
 from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required
+from django.core.mail import EmailMultiAlternatives, send_mail
+from django.template.loader import render_to_string
+from django.contrib.auth.models import User
 
 
 class NewsList(ListView):
@@ -28,8 +32,8 @@ class NewsList(ListView):
         context = super().get_context_data(**kwargs)
         context['time_now'] = datetime.utcnow()
         context['filterset'] = self.filterset
-        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
-        context['is_common'] = self.request.user.groups.filter(name='common').exists()
+        # context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        # context['is_common'] = self.request.user.groups.filter(name='common').exists()
         return context
 
 
@@ -41,8 +45,8 @@ class NewsDetail(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
-        context['is_common'] = self.request.user.groups.filter(name='common').exists()
+        # context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        # context['is_common'] = self.request.user.groups.filter(name='common').exists()
         return context
 
 
@@ -55,7 +59,29 @@ class NewsCreate(PermissionRequiredMixin, CreateView):
     def form_valid(self, form):
         new = form.save(commit=False)
         new.post_format = 'NW'
-        new.author_id_id = 1
+        new.author_id_id = Author.objects.get(user_id=self.request.user).id
+        new.save()
+
+        categories = form.cleaned_data.get('cathegory_id')
+        poluchateli = []
+        for i in categories:
+            for j in UserCategory.objects.filter(category_id = i):
+                try:
+                    for p in j:
+                        a = str(p.user_id.email)
+                        poluchateli.append(a)
+                except TypeError:
+                    a = str(j.user_id.email)
+                    poluchateli.append(a)
+        subject = new.post_title
+        from_email = 'annakim4@yandex.ru'
+        to_email = poluchateli
+
+        html_content = render_to_string('email.html', {'post': new})
+        msg = EmailMultiAlternatives(subject, '', from_email, to_email)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -73,7 +99,7 @@ class ArticleCreate(PermissionRequiredMixin, CreateView):
     def form_valid(self, form):
         new = form.save(commit=False)
         new.post_format = 'AR'
-        new.author_id_id = 1
+        new.author_id_id = Author.objects.get(user_id=self.request.user).id
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -91,6 +117,13 @@ class PostUpdate(PermissionRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        post_id = str(self.request).split('/')[-2]
+        post_author_id = Post.objects.get(id=post_id).author_id_id
+        user_id = Author.objects.get(user_id_id=self.request.user.id).id
+        if post_author_id == user_id:
+            context['user_is_author'] = True
+        else:
+            context['user_is_author'] = False
         return context
 
 
@@ -103,21 +136,82 @@ class PostDelete(PermissionRequiredMixin, DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        post_id = str(self.request).split('/')[-2]
+        post_author_id = Post.objects.get(id=post_id).author_id_id
+        user_id = Author.objects.get(user_id_id=self.request.user.id).id
+        if post_author_id == user_id:
+            context['user_is_author'] = True
+        else:
+            context['user_is_author'] = False
         return context
 
 
 @login_required
-def upgrade_me_redposts(request):
+def upgrade_me(request):
     user = request.user
     premium_group = Group.objects.get(name='authors')
     if not request.user.groups.filter(name='authors').exists():
         premium_group.user_set.add(user)
-    return redirect('/posts')
+        author = Author.objects.create(user_id=user)
+        author.save()
+    return redirect('/personaldata')
 
-@login_required #временная функция
-def delete_me_redpost(request):
+
+class AccountDate(LoginRequiredMixin, View):
+    template_name = 'account_data.html'
+
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        return render(request, self.template_name, context)
+
+    def get_context_data(self):
+        context = {}
+        context['is_not_premium'] = not self.request.user.groups.filter(name='authors').exists()
+        context['username'] = self.request.user.username
+        context['email'] = self.request.user.email
+        user = self.request.user
+        context['policy_exists'] = UserCategory.objects.filter(user_id=user,
+                                                               category_id=(Category.objects.get(id=1))).exists()
+        context['crime_exists'] = UserCategory.objects.filter(user_id=user,
+                                                              category_id=(Category.objects.get(id=2))).exists()
+        context['technologists_exists'] = UserCategory.objects.filter(user_id=user,
+                                                                      category_id=(Category.objects.get(id=3))).exists()
+        context['sport_exists'] = UserCategory.objects.filter(user_id=user,
+                                                              category_id=(Category.objects.get(id=4))).exists()
+        return context
+
+
+@login_required
+def subscription1(request):
     user = request.user
-    premium_group = Group.objects.get(name='authors')
-    if not request.user.groups.filter(name='authors').exists():
-        premium_group.user_set.pop(user)
-    return redirect('/post')
+    if not UserCategory.objects.filter(user_id=user, category_id=(Category.objects.get(id=1))).exists():
+        uscat = UserCategory.objects.create(user_id=user, category_id=(Category.objects.get(id=1)))
+        uscat.save()
+    return redirect('/personaldata')
+
+
+@login_required
+def subscription2(request):
+    user = request.user
+    if not UserCategory.objects.filter(user_id=user, category_id=(Category.objects.get(id=2))).exists():
+        uscat = UserCategory.objects.create(user_id=user, category_id=(Category.objects.get(id=2)))
+        uscat.save()
+    return redirect('/personaldata')
+
+
+@login_required
+def subscription3(request):
+    user = request.user
+    if not UserCategory.objects.filter(user_id=user, category_id=(Category.objects.get(id=3))).exists():
+        uscat = UserCategory.objects.create(user_id=user, category_id=(Category.objects.get(id=3)))
+        uscat.save()
+    return redirect('/personaldata')
+
+
+@login_required
+def subscription4(request):
+    user = request.user
+    if not UserCategory.objects.filter(user_id=user, category_id=(Category.objects.get(id=4))).exists():
+        uscat = UserCategory.objects.create(user_id=user, category_id=(Category.objects.get(id=4)))
+        uscat.save()
+    return redirect('/personaldata')

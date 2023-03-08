@@ -1,11 +1,18 @@
 {% extends 'flatpages/default.html' %}
 
 {% block content %}
-<h1>Редактирование новости:</h1>
+{% if user_is_author %}
+<h1>Редактирование новости</h1>
 <hr>
 <form action="" method="post">
     {% csrf_token %}
+
     {{ form.as_p }}
     <input type="submit" value="save">
 </form>
+{% else %}
+    <h1>
+        Редактирование недоступно. Вы не автор.
+    </h1>
+    {% endif %}
 {% endblock content %}

@@ -5,6 +5,8 @@ from django.urls import reverse
 
 # Create your models here.
 
+
+
 class Author(models.Model):
     user_id = models.OneToOneField(User, on_delete=models.CASCADE)
     auth_rating = models.IntegerField(default=1)
@@ -105,3 +107,7 @@ class Comment(models.Model):
         else:
             self.comm_rating -= 1
         self.save()
+
+class UserCategory(models.Model):
+    category_id = models.ForeignKey(Category, on_delete = models.CASCADE)
+    user_id = models.ForeignKey(User, on_delete = models.CASCADE)

@@ -8,13 +8,7 @@ Product
 
 <!-- В контенте на странице мы выводим сам товар, идентификатор которого был передан в url -->
 {% block content %}
-{% if is_common %}
-{% if is_not_premium %}
-<button><a href="upgrade/"> Хочу стать автором!</a></button>
-{% else %}
-<p>Вы автор</p>
-{% endif %}
-{% endif %}
+
 <h4> Название новости: {{ new.post_title }}</h4>
 <h4> Дата публикации: {{ new.post_datetime|date:'d M Y' }}</h4>
 <h4> Текст новости: {{ new.post_text }}</h4>

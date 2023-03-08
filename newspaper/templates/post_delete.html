@@ -1,6 +1,7 @@
 {% extends 'flatpages/default.html' %}
 
 {% block content %}
+{% if user_is_author %}
 <h1>Удаление новости</h1>
 <hr>
 <form action="" method="post">
@@ -8,4 +9,9 @@
     <p>Удаляем новость "{{ object.post_title }}"?</p>
     <input type="submit" value="Delete"/>
 </form>
+{% else %}
+<h1>
+    Удаление недоступно. Вы не являетесь автором.
+</h1>
+{% endif %}
 {% endblock content %}

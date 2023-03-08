@@ -1,0 +1,45 @@
+{% extends 'flatpages/default.html' %}
+{% block title %}
+Личный кабинет
+{% endblock title %}
+
+{% block content %}
+<h1>
+    Личный кабинет
+</h1>
+<h2>
+    {{ username }}
+</h2>
+<p>
+    Электронная почта: {{email}}
+</p>
+{% if is_not_premium %}
+Авторский статус:
+<button><a href="upgrade/"> Хочу стать автором!</a></button>
+{% else %}
+<p>Авторский статус: Вы автор</p>
+{% endif %}
+<h4>
+    Ваши подписки (категории):
+</h4>
+{% if not policy_exists %}
+<button><a href="subscribe1/">политика(подписаться)</a></button>
+{% else %}
+<p>-политика</p>
+{% endif %}
+{% if not crime_exists %}
+<button><a href="subscribe2/">кримимнал(подписаться)</a></button>
+{% else %}
+<p>-криминал</p>
+{% endif %}
+{% if not technologists_exists %}
+<button><a href="subscribe3/">технологии(подписаться)</a></button>
+{% else %}
+<p>-технологии</p>
+{% endif %}
+{% if not sport_exists %}
+<button><a href="subscribe4/">спорт(подписаться)</a></button>
+{% else %}
+<p>-спорт</p>
+{% endif %}
+{% endblock content %}
