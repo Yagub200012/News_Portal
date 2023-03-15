@@ -16,5 +16,4 @@ urlpatterns = [
     path('personaldata/subscribe1/', subscription1, name='subscription_path1'),
     path('personaldata/subscribe2/', subscription2, name='subscription_path2'),
     path('personaldata/subscribe3/', subscription3, name='subscription_path3'),
-    path('personaldata/subscribe4/', subscription4, name='subscription_path4'),
-]
+    path('personaldata/subscribe4/', subscription4, name='subscription_path4'),]
