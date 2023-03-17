@@ -16,7 +16,8 @@ from django.template.loader import render_to_string
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 
-from .tasks import hello
+
+
 
 
 class NewsList(ListView):
@@ -39,9 +40,6 @@ class NewsList(ListView):
         # context['is_common'] = self.request.user.groups.filter(name='common').exists()
         return context
 
-    def get(self, request):
-        hello.delay()
-        return HttpResponse('Hello!')
 
 
 class NewsDetail(DetailView):
